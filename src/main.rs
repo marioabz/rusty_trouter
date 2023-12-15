@@ -11,4 +11,5 @@ fn main() {
     let args = Cli::parse();
     let mut trouter = tracer::TRouter::new(&args.host);
     println!("{}", &trouter.init_message());
+    trouter.run();
 }
