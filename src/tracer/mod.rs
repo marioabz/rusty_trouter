@@ -12,6 +12,10 @@ const LOCAL_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 const LOCAL_SOCK_ADDRS: SocketAddr = SocketAddr::new(LOCAL_IP, UDP_PORT);
 const MSG: &[u8] = "Hello listeners".as_bytes();
 
+enum MsgSignals {
+    BEGGINIG,
+    
+}
 
 pub struct TRouter {
     host: String,
@@ -89,6 +93,8 @@ pub fn run_tracerouter(host: &str) {
     );
     let mut counter = 1;
     let mut inter_ip: String;
+
+    // Loop that iterates over  64 hops MAX.
     for i in 1..64 {
         print!("{}\t", i);
         io::stdout().flush().unwrap();
@@ -100,6 +106,8 @@ pub fn run_tracerouter(host: &str) {
             &socket.send(MSG);
         }
         let mut icmp_msg = [0u8; 20];
+
+        // For loop that attempts 3 times to contact hop or final destination.
         for j in 0..3 {
             let recv_result = ping_socket.recv_from(&mut icmp_msg);
             if recv_result.is_err() {
