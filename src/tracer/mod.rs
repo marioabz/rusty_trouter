@@ -1,10 +1,9 @@
-
-use std::io::{self, Write,};
-use dns_lookup::{ lookup_host, lookup_addr };
-use std::{str, thread, string};
+use dns_lookup::{lookup_addr, lookup_host};
 use icmp;
+use std::io::{self, Write};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, UdpSocket};
 use std::time::Duration;
+use std::{str, string, thread};
 
 const LOWER_LIMIT_PORT: u32 = 33_434;
 const UPPER_LIMIT_PORT: u32 = 33_534;
@@ -29,7 +28,10 @@ impl TRouter {
         let ips: Vec<IpAddr> = lookup_host(host).unwrap();
         let ip = &ips[0];
         let mut stdout = io::stdout();
-        let init_msg = format!("Traceroute to {0} ({1}), 64 hops max, 32 byte packets\n", host, ip);
+        let init_msg = format!(
+            "Traceroute to {0} ({1}), 64 hops max, 32 byte packets\n",
+            host, ip
+        );
         stdout.write(init_msg.as_bytes());
         stdout.flush();
         if ips.len() > 1 {
@@ -37,9 +39,7 @@ impl TRouter {
             stdout.write(msg.as_bytes());
             stdout.flush();
         }
-        let mut socket = UdpSocket::bind(LOCAL_SOCK_ADDRS).expect(
-            "Couldn't connect to host"
-        );
+        let mut socket = UdpSocket::bind(LOCAL_SOCK_ADDRS).expect("Couldn't connect to host");
         let remote_port = TRouter::get_port(&ip, &socket);
         let mut ping_socket = icmp::IcmpSocket::connect(LOCAL_IP).unwrap();
         TRouter {
@@ -55,32 +55,28 @@ impl TRouter {
             let mut host_port = format!("{0}:{1}", ip, port);
             &socket.connect(&host_port);
             match &socket.send(MSG) {
-                Ok(_) => {
-                    return port
-                },
-                Err(_) => ()
+                Ok(_) => return port,
+                Err(_) => (),
             };
         }
         0
     }
 }
 
-
-fn msg_formater(host: &str, hop_ip: &str) -> String{
-   format!("{} ({})\n", host, hop_ip)
+fn msg_formater(host: &str, hop_ip: &str) -> String {
+    format!("{} ({})\n", host, hop_ip)
 }
 
-
 pub fn run_tracerouter(host: &str) {
-    
     let mut router = TRouter::new(host);
-    router.icmp_socket.set_read_timeout(Some(Duration::new(1, 0)));
+    router
+        .icmp_socket
+        .set_read_timeout(Some(Duration::new(1, 0)));
     let mut counter = 1;
     let mut inter_ip: String;
 
     // Loop that iterates over  64 hops MAX.
     for i in 1..64 {
-
         router.device.write(format!("{i}\t").as_bytes());
         router.device.flush();
         let _ = router.probing_socket.set_ttl(i).expect("Could not set TTL");
@@ -99,17 +95,17 @@ pub fn run_tracerouter(host: &str) {
                     router.device.write(String::from("*  ").as_bytes());
                     io::stdout().flush().unwrap();
                 }
-                continue
+                continue;
             }
             let (num_nutes, hop_ip) = recv_result.unwrap();
             match lookup_addr(&hop_ip) {
-                Ok(hop_name) => {inter_ip=hop_name.to_string()},
-                Err(e) => {inter_ip=hop_ip.to_string()}
+                Ok(hop_name) => inter_ip = hop_name.to_string(),
+                Err(e) => inter_ip = hop_ip.to_string(),
             };
             let mut suc_msg = msg_formater(&inter_ip, &hop_ip.to_string());
             router.device.write(&suc_msg.as_bytes());
             break;
         }
         counter += 1;
-    }   
+    }
 }
